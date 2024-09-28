@@ -1,4 +1,3 @@
-#!/bin/bash
 ##########################################################################################
 # 事前に設定する内容
 ##########################################################################################
@@ -14,26 +13,49 @@ source ../config.env
 [ "$WEBAPP_CLIENT_ID" = "<WebAppのクライアントID>" ] || [ "$WEBAPP_CLIENT_ID" = "" ] && echo "エラー: 環境変数 WEBAPP_CLIENT_ID が設定されていないか、空文字です。" && exit 1
 [ "$WEBAPP_CLIENT_SECRET" = "<WebAppのクライアントシークレット>" ] || [ "$WEBAPP_CLIENT_SECRET" = "" ] && echo "エラー: 環境変数 WEBAPP_CLIENT_SECRET が設定されていないか、空文字です。" && exit 1
 
-##########################################################################################
-# 提供者認可機能の設定ファイルを更新
-##########################################################################################
-### 認証機能との連携に関する設定
-tgt_path=${WORKDIR}/klab-connector-v4/misc/authorization/settings.json
-sed -i "s|<提供者コネクタのクライアントID>|provider-${CADDE_USER_ID}|g" "$tgt_path"
-sed -i "s|<認可機能のクライアントID>|${AUTHZ_CLIENT_ID}|g" "$tgt_path"
-sed -i "s|<認可機能のクライアントシークレット>|${AUTHZ_CLIENT_SECRET}|g" "$tgt_path"
-sed -i "s|<認可機能KeycloakベースURL>|http://cadde-authz-${CADDE_USER_NUMBER}.${SITE_NAME}.dataspace.internal:5080/keycloak|g" "$tgt_path"
-echo "CADDEデータ共有基盤の認証機能(Keycloak)との連携に関する設定を行いました。"
-echo "    - ${tgt_path}"
+# CKANサイトの
+source ./data-reg-config.env
+[ "$FILENAME" = "<提供データのファイル名>" ] || [ "$FILENAME" = "" ] && echo "エラー: 環境変数 FILENAME が設定されていないか、空文字です。" && exit 1
+[ "$CKAN_API_KEY" = "<CAKN APIキー>" ] || [ "$CKAN_API_KEY" = "" ] && echo "エラー: 環境変数 CKAN_API_KEY が設定されていないか、空文字です。" && exit 1
+[ "$DATA_ID" = "<リソースID>" ] || [ "$DATA_ID" = "" ] && echo "エラー: 環境変数 DATA_ID が設定されていないか、空文字です。" && exit 1
 
-### 認可機能の起動
-cd ${WORKDIR}/klab-connector-v4/misc/authorization
-echo "認可機能を起動しています..."
-sh ./start.sh
-docker compose ps
-echo "認可機能の起動を完了しました。"
 
-### 認可機能の初期セットアップ
-echo "認可機能の初期セットアップを開始します..."
-cd ${WORKDIR}/klab-connector-v4/misc/authorization
-bash ./provider_setup.sh
+# 1つ目のサブパート：JSONを作成 -> 一時ファイルに保存
+json_request=$(cat <<EOF
+{
+  "cdldatamodelversion": "2.0",
+  "cdleventtype": "Create",
+  "dataprovider": "${CADDE_USER_ID}",
+  "cdldatatags": [
+    {
+      "cdluri": "http://data-management.${SITE_NAME}.internal:8080/${FILENAME}"
+    }
+  ]
+}
+EOF
+)
+
+json_temp_file=$(mktemp)
+echo "$json_request" > "$json_temp_file"
+
+# 2つ目のサブパート：原本となるデータファイルの絶対パスを記述
+data_file="${WORKDIR}/private-http-server/data/${FILENAME}"
+echo ${data_file}
+# 原本情報登録リクエスト
+json_output=$(curl -v -sS -X POST "http://cadde-provenance-management.koshizukalab.dataspace.internal:3000/v2/eventwithhash" \
+-F "request=@$json_temp_file;type=application/json" \
+-F "upfile=@$data_file;type=text/plain" \
+| jq '.')
+
+echo ${json_output}
+EVENT_ID=$(echo "$json_output" | jq -r '.cdleventid')
+
+# 提供者のCKANカタログサイトにイベントキーを登録
+echo "提供者のCKANカタログサイトにイベントキーを登録しています..."
+echo "    - 来歴管理のEVENT_ID: ${EVENT_ID}"
+curl -v -sS -X POST "https://cadde-catalog-${CADDE_USER_NUMBER}.${SITE_NAME}.dataspace.internal:8443/api/3/action/resource_patch" \
+-H "Authorization: ${CKAN_API_KEY}" \
+-d '{"id": "${DATA_ID}", "caddec_resource_id_for_provenance": "${EVENT_ID}"}' \
+--cacert "${WORKDIR}/certs/cacert.pem" \
+| jq '.'
+
