@@ -65,9 +65,6 @@ echo "    - ${WORKDIR}/ckan-docker/nginx/Dockerfile"
 
 ### CKANサイトのBuildと起動
 cd ${WORKDIR}/ckan-docker
-
-docker pull docker.io/library/postgres:12-alpine
-docker pull docker.io/ckan/ckan-base:2.10
 echo "CKANサイトのBuildを行っています..."
 docker compose build
 echo "CKANサイトの起動を行っています..."
