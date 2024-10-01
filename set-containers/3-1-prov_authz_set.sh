@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/bin/bash -e
+set -e
+set -o pipefail
 ##########################################################################################
 # 事前に設定する内容
 ##########################################################################################
@@ -15,7 +17,7 @@ source ../config.env
 [ "$WEBAPP_CLIENT_SECRET" = "<WebAppのクライアントシークレット>" ] || [ "$WEBAPP_CLIENT_SECRET" = "" ] && echo "エラー: 環境変数 WEBAPP_CLIENT_SECRET が設定されていないか、空文字です。" && exit 1
 
 # 提供者の認可機能によるクライントID/シークレットの定義
-PROVIDER_CLIENT_SECRET_BY_AUTHZ=8erqM2zScOVf5ZrzG8XRwVecnP8wSP3Q
+PROVIDER_CLIENT_SECRET_BY_AUTHZ=TvDKMnewc8EVjmZcx55AYHjClt2hdLYb
 [ "PROVIDER_CLIENT_SECRET_BY_AUTHZ" = "<認可機能が発行したクライアントシークレット>" ] && echo "エラー: 認可機能が発行したクライアントシークレットを記載して下さい。" && exit 1
 
 
@@ -34,7 +36,7 @@ tgt_path=${WORKDIR}/klab-connector-v4/src/provider/connector-main/swagger_server
 echo "    - ${tgt_path}"
 sed -i "s|<CADDEユーザID>|${CADDE_USER_ID}|g" "$tgt_path"
 sed -i "s|<提供者コネクタのクライアントID>|provider-${CADDE_USER_ID}|g" "$tgt_path"
-sed -i "s|<提供者コネクタのクライアントシークレット>|${PROVIDER_CLIENT_SECRET}|g" "$tgt_path"
+sed -i "s|<提供者コネクタのクライアントシークレット>|${PROVIDER_CLIENT_SECRET_BY_AUTHZ}|g" "$tgt_path"
 
 ### 提供者コネクタの再起動
 cd ${WORKDIR}/klab-connector-v4/src/provider

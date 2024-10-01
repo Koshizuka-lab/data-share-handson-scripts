@@ -1,4 +1,7 @@
 #!/bin/bash
+set -e
+set -o pipefail
+
 cd ${WORKDIR}/data-share-handson-scripts/set-containers
 bash 1-ckan_set.sh
 

@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/bin/bash -e
+set -e
+set -o pipefail
 ##########################################################################################
 # 事前に設定する内容
 ##########################################################################################
@@ -58,8 +60,8 @@ ls -l ${WORKDIR}/klab-connector-v4/src/consumer/squid/volumes/ssl
 ### フォワードプロキシの起動と停止
 echo "フォワードプロキシの起動と停止を行っています..."
 cd ${WORKDIR}/klab-connector-v4/src/consumer/squid
-docker pull docker.io/library/alpine:3.16
-docker compose -f docker-compose_initial.yml up -d --build
+docker compose -f docker-compose_initial.yml build
+docker compose -f docker-compose_initial.yml up -d
 docker compose -f docker-compose_initial.yml ps
 # SSL Bumpで用いられるデータベースを初期化
 docker exec -it forward-proxy /usr/lib/squid/security_file_certgen -c -s /var/lib/squid/ssl_db -M 20MB
@@ -84,7 +86,7 @@ echo "提供者コネクタの接続設定が完了しました。"
 echo "    - ${tgt_path}"
 
 ### ポートフォワーディングの設定変更：1443->443、180->80
-tgt_path=${WORKDIR}/klab-connector-v4/src/consumer/docker-compose.yml 
+tgt_path=${WORKDIR}/klab-connector-v4/src/consumer/docker-compose.yml
 sed -i "s|- 443:443|- 1443:443|g" "$tgt_path"
 sed -i "s|- 80:80|- 180:80|g" "$tgt_path"
 echo "ポートフォワーディングの設定変更が完了しました。"

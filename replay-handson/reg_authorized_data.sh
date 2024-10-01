@@ -1,3 +1,6 @@
+#!/bin/bash -e
+set -e
+set -o pipefail
 ##########################################################################################
 # 事前に設定する内容
 ##########################################################################################
@@ -42,20 +45,45 @@ echo "$json_request" > "$json_temp_file"
 data_file="${WORKDIR}/private-http-server/data/${FILENAME}"
 echo ${data_file}
 # 原本情報登録リクエスト
+curl -v -sS -X POST "http://cadde-provenance-management.koshizukalab.dataspace.internal:3000/v2/eventwithhash" \
+-F "request=@$json_temp_file;type=application/json" \
+-F "upfile=@$data_file;type=text/plain" \
+| jq '.'
+
 json_output=$(curl -v -sS -X POST "http://cadde-provenance-management.koshizukalab.dataspace.internal:3000/v2/eventwithhash" \
 -F "request=@$json_temp_file;type=application/json" \
 -F "upfile=@$data_file;type=text/plain" \
 | jq '.')
 
 echo ${json_output}
+
 EVENT_ID=$(echo "$json_output" | jq -r '.cdleventid')
+echo ${EVENT_ID}
+echo ${EVENT_ID}
+echo ${EVENT_ID}
+echo ${EVENT_ID}
 
 # 提供者のCKANカタログサイトにイベントキーを登録
-echo "提供者のCKANカタログサイトにイベントキーを登録しています..."
+echo "\\提供者のCKANカタログサイトにイベントキーを登録しています..."
 echo "    - 来歴管理のEVENT_ID: ${EVENT_ID}"
-curl -v -sS -X POST "https://cadde-catalog-${CADDE_USER_NUMBER}.${SITE_NAME}.dataspace.internal:8443/api/3/action/resource_patch" \
+
+echo "******************************"
+echo 'curl -v -sS -X POST "https://cadde-catalog-${CADDE_USER_NUMBER}.${SITE_NAME}.dataspace.internal:8443/api/3/action/resource_patch" \
 -H "Authorization: ${CKAN_API_KEY}" \
 -d '{"id": "${DATA_ID}", "caddec_resource_id_for_provenance": "${EVENT_ID}"}' \
+--cacert "${WORKDIR}/certs/cacert.pem" '
+
+echo "$CKAN_API_KEY"
+echo "${WORKDIR}/certs/cacert.pem"
+echo "${EVENT_ID}"
+echo "${DATA_ID}"
+
+curl -v -sS -X POST "https://cadde-catalog-${CADDE_USER_NUMBER}.${SITE_NAME}.dataspace.internal:8443/api/3/action/resource_patch" \
+-H "Authorization: ${CKAN_API_KEY}" \
+-d "{\"id\": \"${DATA_ID}\", \"caddec_resource_id_for_provenance\": \"${EVENT_ID}\"}" \
 --cacert "${WORKDIR}/certs/cacert.pem" \
 | jq '.'
+
+
+
 

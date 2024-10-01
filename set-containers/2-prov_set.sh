@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/bin/bash -e
+set -e
+set -o pipefail
 ##########################################################################################
 # 事前に設定する内容
 ##########################################################################################
@@ -53,6 +55,12 @@ sed -i "s|https://example1.com/data.txt|http://data-management.${SITE_NAME}.inte
 sed -i "s|https://example2.com/data.txt|http://data-management.${SITE_NAME}.internal:8080/unauthorized.txt|g" "$tgt_path"
 echo "プライベートHTTPサーバのデフォルトファイルを設定しました。"
 echo "   - ${tgt_path}"
+
+### Dockerコンテナに独自ドメインを割り当てる
+tgt_path=${WORKDIR}/klab-connector-v4/src/provider/docker-compose.yml
+sed -i "s|siteXX|${SITE_NAME}|g" "$tgt_path"
+echo "ポートフォワーディングの設定変更が完了しました。"
+echo "    - ${tgt_path}"
 
 ### 提供者コネクタを起動
 echo "提供者コネクタを起動しています..."

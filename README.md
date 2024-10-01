@@ -9,3 +9,15 @@
 ```
 docker pull docker.io/library/postgres:12-alpine
 ```
+
+### 以下を行うとうまく行くときがある
+```
+sudo systemctl restart docker
+```
+
+### 以下の設定をする。
+
+```
+sudo usermod -aG docker $USER
+newgrp docker
+```
