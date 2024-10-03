@@ -17,7 +17,7 @@ source ../config.env
 [ "$WEBAPP_CLIENT_SECRET" = "<WebAppのクライアントシークレット>" ] || [ "$WEBAPP_CLIENT_SECRET" = "" ] && echo "エラー: 環境変数 WEBAPP_CLIENT_SECRET が設定されていないか、空文字です。" && exit 1
 
 # 提供者の認可機能によるクライントID/シークレットの定義
-PROVIDER_CLIENT_SECRET_BY_AUTHZ=TvDKMnewc8EVjmZcx55AYHjClt2hdLYb
+PROVIDER_CLIENT_SECRET_BY_AUTHZ=CYFwGpgrgehRoKxozyMzFAj308sXBpY0
 [ "PROVIDER_CLIENT_SECRET_BY_AUTHZ" = "<認可機能が発行したクライアントシークレット>" ] && echo "エラー: 認可機能が発行したクライアントシークレットを記載して下さい。" && exit 1
 
 
