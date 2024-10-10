@@ -1,5 +1,4 @@
-# 稼働中を含む全Dockerコンテナを削除するスクリプト
-sudo aa-remove-unknown
+# 稼働中を含む全Dockerコンテナ、Volume、イメージを削除するスクリプト
 sudo docker stop $(sudo docker ps -a -q)
 sudo docker rm -force $(sudo docker ps -aq)
 sudo docker system prune -a
