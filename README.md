@@ -10,10 +10,17 @@
 docker pull docker.io/library/postgres:12-alpine
 ```
 
-### Dockerのリスタート
+### CKANのBuild時のエラー
+
+```txt
+=> ERROR [ckan 2/4] RUN mkdir /docker-entrypoint.d
 ```
+　上記エラー出た場合、Dockerの再起動を下記コマンドで実行すると良い。
+
+```bash
 sudo systemctl restart docker
 ```
+
 
 ### 現在のユーザをDockerグループに追加
 
