@@ -17,15 +17,23 @@ source ../config.env
 [ "$WEBAPP_CLIENT_SECRET" = "<WebAppのクライアントシークレット>" ] || [ "$WEBAPP_CLIENT_SECRET" = "" ] && echo "エラー: 環境変数 WEBAPP_CLIENT_SECRET が設定されていないか、空文字です。" && exit 1
 
 # CKANサイトの情報
-source ./data-reg-config.env
-[ "$FILENAME" = "<提供データのファイル名>" ] || [ "$FILENAME" = "" ] && echo "エラー: 環境変数 FILENAME が設定されていないか、空文字です。" && exit 1
+source ./ckan_api_key.env
+#[ "$FILENAME" = "<提供データのファイル名>" ] || [ "$FILENAME" = "" ] && echo "エラー: 環境変数 FILENAME が設定されていないか、空文字です。" && exit 1
 [ "$CKAN_API_KEY" = "<CAKN APIキー>" ] || [ "$CKAN_API_KEY" = "" ] && echo "エラー: 環境変数 CKAN_API_KEY が設定されていないか、空文字です。" && exit 1
-[ "$DATA_ID" = "<リソースID>" ] || [ "$DATA_ID" = "" ] && echo "エラー: 環境変数 DATA_ID が設定されていないか、空文字です。" && exit 1
+#[ "$DATA_ID" = "<リソースID>" ] || [ "$DATA_ID" = "" ] && echo "エラー: 環境変数 DATA_ID が設定されていないか、空文字です。" && exit 1
 
+########################################################################################
+# 対話形式でデータを入力
+########################################################################################
+echo -n "プライベートHTTPサーバに配置したファイル名: "
+read FILENAME
+echo -n "リソースID(提供者カタログサイトCKANより取得): "
+read DATA_ID
 
 ########################################################################################
 # 1つ目のサブパート：JSONを作成 -> 一時ファイルに保存
 ########################################################################################
+
 json_request=$(cat <<EOF
 {
   "cdldatamodelversion": "2.0",
@@ -47,34 +55,30 @@ echo "$json_request" > "$json_temp_file"
 # 2つ目のサブパート：原本となるデータファイルの絶対パスを記述(来歴サーバに接続して登録)
 ########################################################################################
 data_file="${WORKDIR}/private-http-server/data/${FILENAME}"
-echo ${data_file}
-# 原本情報登録リクエスト
-curl -v -sS -X POST "http://cadde-provenance-management.koshizukalab.dataspace.internal:3000/v2/eventwithhash" \
--F "request=@$json_temp_file;type=application/json" \
--F "upfile=@$data_file;type=text/plain" \
-| jq '.'
+echo "${data_file} の原本情報を来歴管理サーバに保存しています..."
 
+# 原本情報登録リクエスト
 json_output=$(curl -v -sS -X POST "http://cadde-provenance-management.koshizukalab.dataspace.internal:3000/v2/eventwithhash" \
 -F "request=@$json_temp_file;type=application/json" \
 -F "upfile=@$data_file;type=text/plain" \
 | jq '.')
 
-echo ${json_output}
-
 EVENT_ID=$(echo "$json_output" | jq -r '.cdleventid')
+echo "登録された原本情報登録、来歴イベントID: ${EVENT_ID}"
 
 
 ########################################################################################
 # 提供者のCKANカタログサイトにイベントキーを登録
 ########################################################################################
-echo "\\提供者のCKANカタログサイトにイベントキーを登録しています..."
+echo ""
+echo ""
+echo "提供者のCKANカタログサイトにイベントキーを登録しています..."
 echo "    - 来歴管理のEVENT_ID: ${EVENT_ID}"
 
-echo "******************************"
-echo 'curl -v -sS -X POST "https://cadde-catalog-${CADDE_USER_NUMBER}.${SITE_NAME}.dataspace.internal:8443/api/3/action/resource_patch" \
--H "Authorization: ${CKAN_API_KEY}" \
--d '{"id": "${DATA_ID}", "caddec_resource_id_for_provenance": "${EVENT_ID}"}' \
---cacert "${WORKDIR}/certs/cacert.pem" '
+#echo 'curl -v -sS -X POST "https://cadde-catalog-${CADDE_USER_NUMBER}.${SITE_NAME}.dataspace.internal:8443/api/3/action/resource_patch" \
+#-H "Authorization: ${CKAN_API_KEY}" \
+#-d '{"id": "${DATA_ID}", "caddec_resource_id_for_provenance": "${EVENT_ID}"}' \
+#--cacert "${WORKDIR}/certs/cacert.pem" '
 
 curl -v -sS -X POST "https://cadde-catalog-${CADDE_USER_NUMBER}.${SITE_NAME}.dataspace.internal:8443/api/3/action/resource_patch" \
 -H "Authorization: ${CKAN_API_KEY}" \
@@ -83,7 +87,7 @@ curl -v -sS -X POST "https://cadde-catalog-${CADDE_USER_NUMBER}.${SITE_NAME}.dat
 | jq '.'
 
 ########################################################################################
-# プライベートサーバへのリンクを、提供者コネクタの認可、来歴等の設定ファイル(json)に追加
+# プライベートHTTPサーバのファイルへのリンクを、提供者コネクタの認可、来歴等の設定ファイル(json)に追加
 ########################################################################################
 JSON_FILE_PATH=${WORKDIR}/klab-connector-v4/src/provider/connector-main/swagger_server/configs/http.json
 TMP_JSON_FILE_PATH=${WORKDIR}/klab-connector-v4/src/provider/connector-main/swagger_server/configs/http.json.bak
@@ -109,3 +113,8 @@ cp ${TMP_JSON_FILE_PATH} ${JSON_FILE_PATH}
 echo "提供者コネクタ上に、ファイルのURL設定を行いました。"
 echo "    - ${JSON_FILE_PATH}"
 
+echo ""
+echo ""
+echo "来歴サーバに原本情報登録されたデータの情報です。"
+echo "    - リソースURL: ${ADDED_URL}"
+echo "    - 来歴イベントID: ${EVENT_ID}"
